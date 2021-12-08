@@ -239,7 +239,7 @@ success=True
 #raise NameError("testing")
 count = 0
 face_cascade = cv2.CascadeClassifier('detect.xml')
-faces_list=[[],[],[],[],[],[]]
+faces_list=[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
 
 while success:
 
@@ -334,19 +334,16 @@ for frames in faces_list:
     emotion_str.append(cat2Label[str(emotion)])
     print("EMOTION IS"+cat2Label[str(emotion)])
 
-
-print("display the emotion")
-print(emotion_str[0])
 root= tk.Tk()
 
 canvas1 = tk.Canvas(root, width = 300, height = 300)
 canvas1.pack()
+temp=''
+for i in range(len(emotion_str)):
+    temp+='image'+str(i)+': '+str(emotion_str[i])+'\n'
+                                   
+label1 = tk.Label(root, text= temp, fg='green', font=('helvetica', 12, 'bold'))
 
-def hello ():  
-    label1 = tk.Label(root, text= 'cat2Label[str(emotion)]', fg='green', font=('helvetica', 12, 'bold'))
-    canvas1.create_window(150, 200, window=label1)
-    
-button1 = tk.Button(text=emotion_str[0],command=hello, bg='brown',fg='white')
-canvas1.create_window(150, 150, window=button1)
+canvas1.create_window(150, 150, window=label1)
 
 root.mainloop()
