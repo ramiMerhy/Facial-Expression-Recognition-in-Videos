@@ -218,7 +218,7 @@ video_path=".."
 #myScreenshot = pyautogui.screenshot()
 #myScreenshot.save(r'ss1.png')
 import time
-time.sleep(1)
+time.sleep(5)
 print("start recording")
 from PIL import ImageGrab 
 im = ImageGrab.grab()
@@ -235,114 +235,192 @@ width, height = im.size   # Get dimensions
 #im.save('ss1.png')
 success=True
 
-
 #raise NameError("testing")
-count = 0
+#raise NameError("testing")
+
 face_cascade = cv2.CascadeClassifier('detect.xml')
-faces_list=[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
-
-while success:
-
-    #change the image to numpy array
-    frame = np.array(im)
-    #plt.imshow(frame)
-    #plt.show()
-    print('Read a new frame: ', success)
-    count += 1
-    #crop, rotate and find the face of the image
-
+start_time = time.time()
+emotion_count=[]
+print((time.time()-start_time))
+numberofSamples=0
+faces_index=[]
+while((time.time()-start_time)<60):
     
-    #try:
-        #revert to RGB
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    #plt.imshow(gray)
-    #plt.show()
-    faces = face_cascade.detectMultiScale(gray, 1.1, 4)
-    number_of_faces=0
-    print("number of faces" + str(len(faces)))
-    print(faces)
-    #print(type(faces))
-    for i,(x, y, w, h) in enumerate(faces):
-        temp2=frame.copy()
-        print("face found "+str(i))
-        #print(frame)
-        #cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
+    count = 0
+    faces_list=[[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[],[]]
+    while success:
 
-        face = temp2[y:y + h, x:x + w]
-        #plt.imshow(face)
+        #change the image to numpy array
+        frame = np.array(im)
+        #plt.imshow(frame)
         #plt.show()
-        cv2.imwrite("saveimages/frame%d_face#_%d.jpg" % (count,i), face)
-        temp=cv2.cvtColor(face, cv2.COLOR_BGR2RGB)
-        temp=transformValidation(Image.fromarray(temp))
-        faces_list[i].append(temp)
+        print('Read a new frame: ', success)
+        count += 1
+        #crop, rotate and find the face of the image
 
-    #except:
-    #    print("face not found")
-    #    print('Whew', sys.exc_info()[0], 'occurred.')
+        
+        #try:
+            #revert to RGB
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        #plt.imshow(gray)
+        #plt.show()
+        faces = face_cascade.detectMultiScale(gray, 1.1, 4)
+        number_of_faces=0
+
+        print("number of faces" + str(len(faces)))
+        #print(faces)
+        #print(type(faces))
+        for i,(x, y, w, h) in enumerate(faces):
+            temp2=frame.copy()
+            print("face found "+str(i))
+            if(numberofSamples==0 and count==1):
+                faces_index.append([x,y])
+                index=i
+            else:
+                difference=[]
+                for i in range(len(faces)):
+                    difference.append((x-faces_index[i][0])**2+(y-faces_index[i][1])**2)
+                min_value = min(difference)
+                index = difference.index(min_value)
+            #print(frame)
+            #cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
+
+            face = temp2[y:y + h, x:x + w]
+            #plt.imshow(face)
+            #plt.show()
+            cv2.imwrite("saveimages/frame%d_face#_%d_run_%d.jpg" % (count,index,numberofSamples), face)
+            temp=cv2.cvtColor(face, cv2.COLOR_BGR2RGB)
+            temp=transformValidation(Image.fromarray(temp))
+            faces_list[index].append(temp)
+
+        #except:
+        #    print("face not found")
+        #    print('Whew', sys.exc_info()[0], 'occurred.')
+
+        print("faces index")
+        print(faces_index)
+        #    continue
+        #raise nameError("found face stop")
+        #raise Error("test")
+      
+
+        idImg+=1
+        good+=1
+        #take one frame of the video
+        im = ImageGrab.grab()
+        print('here')
+        #print(im)
+        width, height = im.size   # Get dimensions
+
+        #left = (width)/4
+        #top = (height)/4
+        #right = (width)/4
+        #bottom = (height)/4
+
+        # Crop the center of the image
+        #im = im.crop((left, top, right, bottom))
+        #im.save('ss.png')
+        success=True
+        print(count)
+        if(count==3):
+            success=False
+    good=0
+    faces_list = [x for x in faces_list if x != []]
+    emotion_str=[]
+    for frames in faces_list:
+        #no_grad: no training and no loss
+        with torch.no_grad():
+            #convert from a python list to a tensor
+            print(len(frames))
+            input_var=torch.stack(frames, dim=3)
+            #add dimension (add a batch size of 1: for example 1*30*3*224*224)
+            input_var=input_var.unsqueeze(0)
+            #change input to GPU if exist
+            input_var = input_var.to(DEVICE)
+            #output of the network
+            pred_score = model(input_var)
+            #finding emotions based on max value
+            emotion=torch.argmax(pred_score).item()
+            #changing scores to probabilities
+            #print(pred_score)
+            probabilities=F.softmax(pred_score, dim=1).cpu().numpy()
+
+        #print(probabilities)
+
+        #print(emotion)
+        cat2Label={ "Happy": 0,"Angry": 1, "Disgust": 2, "Fear": 3, "Sad": 4, "Neutral": 5, "Surprise": 6, "0":"Happy", "1":"Angry", "2":"Disgust", "3":"Fear", "4":"Sad", "5":"Neutral", "6":"Surprise"}
+        emotion_str.append(cat2Label[str(emotion)])
+        print("EMOTION IS"+cat2Label[str(emotion)])
 
 
-    #    continue
-    #raise nameError("found face stop")
-    #raise Error("test")
-  
 
-    idImg+=1
-    good+=1
-    #take one frame of the video
-    im = ImageGrab.grab()
-    print('here')
-    print(im)
-    width, height = im.size   # Get dimensions
-
-    #left = (width)/4
-    #top = (height)/4
-    #right = (width)/4
-    #bottom = (height)/4
-
-    # Crop the center of the image
-    #im = im.crop((left, top, right, bottom))
-    #im.save('ss.png')
+    emotion_count.append(emotion_str)
+    print((time.time()-start_time))
+    if(numberofSamples==0):
+        numberoffacesinscene=len(emotion_count[0])
+    numberofSamples+=1
     success=True
-    print(count)
-    if(count==3):
-        success=False
-good=0
-faces_list = [x for x in faces_list if x != []]
-emotion_str=[]
-for frames in faces_list:
-    #no_grad: no training and no loss
-    with torch.no_grad():
-        #convert from a python list to a tensor
-        print(len(frames))
-        input_var=torch.stack(frames, dim=3)
-        #add dimension (add a batch size of 1: for example 1*30*3*224*224)
-        input_var=input_var.unsqueeze(0)
-        #change input to GPU if exist
-        input_var = input_var.to(DEVICE)
-        #output of the network
-        pred_score = model(input_var)
-        #finding emotions based on max value
-        emotion=torch.argmax(pred_score).item()
-        #changing scores to probabilities
-        print(pred_score)
-        probabilities=F.softmax(pred_score, dim=1).cpu().numpy()
-
-    print(probabilities)
-
-    print(emotion)
-    cat2Label={ "Happy": 0,"Angry": 1, "Disgust": 2, "Fear": 3, "Sad": 4, "Neutral": 5, "Surprise": 6, "0":"happy", "1":"Angry", "2":"Disgust", "3":"Fear", "4":"Sad", "5":"Neutral", "6":"Surprise"}
-    emotion_str.append(cat2Label[str(emotion)])
-    print("EMOTION IS"+cat2Label[str(emotion)])
+    time.sleep(3)
 
 root= tk.Tk()
 
-canvas1 = tk.Canvas(root, width = 300, height = 300)
+canvas1 = tk.Canvas(root, width = 600, height = 600)
 canvas1.pack()
-temp=''
-for i in range(len(emotion_str)):
-    temp+='image'+str(i)+': '+str(emotion_str[i])+'\n'
-                                   
-label1 = tk.Label(root, text= temp, fg='green', font=('helvetica', 12, 'bold'))
+#print("ec"+str(len(emotion_count)))
+Count=[]
+#print(len(emotion_count[0])) 
+
+#print("m "+str(len(Count)))
+
+for i in range(len(emotion_count[0])):
+    Count.append([0,0,0,0,0,0,0])
+    #print("n "+str(len(Count)))
+    #print("m "+str(len(Count[i])))
+    #print(Count)
+
+
+#print("n "+str(len(Count)))
+#print("m "+str(len(Count[i])))
+#print(Count)
+#print("i"+str(i))
+#print("coun shape m"+str(len(Count)))
+#print("coun shape n"+str(len(Count[0])))
+#print(emotion_count)
+print('number of faces'+str(len(emotion_count[0])))
+print('number of samples'+str(len(emotion_count)))
+for i in range(len(emotion_count[0])):
+ 
+    for j in range(len(emotion_count)):
+        #print("i"+str(i))
+        #print("j"+str(j))
+        #print("emo"+str(emotion_count[j][i]))
+
+        if(emotion_count[j][i]=='Happy'):
+            Count[i][0]+=1
+        if(emotion_count[j][i]=='Angry'):
+            Count[i][1]+=1
+        if(emotion_count[j][i]=='Disgust'):
+            Count[i][2]+=1
+        if(emotion_count[j][i]=='Fear'):
+            Count[i][3]+=1
+        if(emotion_count[j][i]=='Sad'):
+            Count[i][4]+=1
+        if(emotion_count[j][i]=='Neutral'):
+            Count[i][5]+=1
+        if(emotion_count[j][i]=='Surprise'):
+            Count[i][6]+=1
+text=''
+#print(Count)
+for i in range(len(Count)):
+    text+='face '+str(i)+': '
+    for j,temp in enumerate(Count[i]):
+        if(temp>0):
+            if(j>0):
+                text+=', '
+            text+=cat2Label[str(j)]+' '+str(temp)
+    text+='\n'
+
+label1 = tk.Label(root, text= text, fg='green', font=('helvetica', 12, 'bold'))
 
 canvas1.create_window(150, 150, window=label1)
 
